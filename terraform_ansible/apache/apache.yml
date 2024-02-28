@@ -1,0 +1,15 @@
+---
+- name: Install apache server   # name of the playbook
+  hosts: ec2    # target group defined in the inventory file 
+  become: yes
+  tasks:
+    - name: install apache server   # name of the play
+      yum:
+        name: httpd
+        state: latest
+        update_cache: yes
+    - name: start and enable autostart of apache server
+      systemd:
+        name: httpd
+        state: started
+        enabled: yes
