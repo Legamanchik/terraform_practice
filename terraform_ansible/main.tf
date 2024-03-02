@@ -27,6 +27,19 @@ resource "aws_subnet" "main-subnet" {
     Name = "main-subnet"
   }
 }
+resource "tls_private_key" "ssh-key" {
+  algorithm = "RSA"
+  rsa_bits = 4096
+}
+resource "aws_key_pair" "ssh-key-tf" {
+   key_name = "test-key"
+   public_key = tls_private_key.ssh-key.public_key_openssh
+}
+resource "local_file" "ssh-key-tf" {
+  filename = "test-key"
+  content = tls_private_key.ssh-key.private_key_pem
+}
+
 data "aws_ami" "amzn-linux-2023-ami" {
   most_recent = true
   owners      = ["amazon"]
@@ -40,45 +53,35 @@ data "aws_ami" "amzn-linux-2023-ami" {
 resource "aws_security_group" "main-sg" {
   name   = "sg"
   vpc_id = aws_vpc.main.id
+
+  ingress  {
+    to_port           = 80
+    protocol          = "tcp"
+    cidr_blocks       = ["0.0.0.0/0"]
+    from_port         = 80
+  }
+  ingress {
+    to_port           = 22
+    protocol          = "tcp"
+    cidr_blocks       = ["0.0.0.0/0"]
+    from_port         = 22
+  }
+  egress {
+    to_port           = 0
+    protocol          = "-1"
+    cidr_blocks       = ["0.0.0.0/0"]
+    from_port         = 0
+  }
 }
 
-resource "aws_security_group_rule" "allow_outbount" {
-  type              = "egress"
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  from_port         = 0
-  security_group_id = aws_security_group.main-sg.id
-}
-resource "aws_security_group_rule" "allow_inbound" {
-  type              = "ingress"
-  to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  from_port         = 80
-  security_group_id = aws_security_group.main-sg.id
-}
-
-resource "aws_security_group" "sg-for-ssh" {
-  name   = "sg_ssh"
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_security_group_rule" "allow_ssh" {
-  type              = "ingress"
-  to_port           = 22
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  from_port         = 22
-  security_group_id = aws_security_group.sg-for-ssh.id
-}
 
 resource "aws_instance" "main-instance-1" {
   ami           = data.aws_ami.amzn-linux-2023-ami.id
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.main-subnet.id
-  vpc_security_group_ids = ["${aws_security_group.main-sg.id}", "${aws_security_group.sg-for-ssh.id}"]
+  vpc_security_group_ids = ["${aws_security_group.main-sg.id}"]
   associate_public_ip_address = "true"
+  key_name = "test-key"
   tags = {
     Name = "instance-main"
   }
