@@ -1,0 +1,1 @@
+to start playbook "ansible-playbook -i hosts  apache.yml"
