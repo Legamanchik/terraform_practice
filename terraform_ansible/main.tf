@@ -9,14 +9,14 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  region = "us-east-1"
+  region = var.default_region
 }
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.cidr_block_vpc
   enable_dns_hostnames = true
   enable_dns_support   = true
   tags = {
-    Name = "vpc-terraform-ansible"
+    Name = var.vpc_name
   }
 }
 resource "aws_internet_gateway" "main_gw" {
@@ -35,7 +35,7 @@ resource "aws_route_table" "main-table" {
 
   route {
 
-  cidr_block = "0.0.0.0/0"
+  cidr_block = var.cidr_block
   gateway_id = aws_internet_gateway.main_gw.id
 
   }
@@ -51,7 +51,7 @@ resource "tls_private_key" "key_tf" {
   rsa_bits = 4096
 }
 resource "aws_key_pair" "tf-key" {
-   key_name = "tf-key"
+   key_name = var.key_name
    public_key = tls_private_key.key_tf.public_key_openssh
 }
 resource "local_file" "tf-key" {
@@ -82,7 +82,7 @@ resource "aws_security_group" "main-sg" {
 
   ingress {
     cidr_blocks = [
-      "0.0.0.0/0"
+      var.cidr_block
     ]
     from_port = 22
     to_port   = 22
@@ -90,7 +90,7 @@ resource "aws_security_group" "main-sg" {
   }
   ingress {
     cidr_blocks = [
-      "0.0.0.0/0"
+      var.cidr_block
     ]
     from_port = 80
     to_port   = 80
@@ -99,7 +99,7 @@ resource "aws_security_group" "main-sg" {
   egress {
     to_port           = 0
     protocol          = "-1"
-    cidr_blocks       = ["0.0.0.0/0"]
+    cidr_blocks       = var.cidr_blocks
     from_port         = 0
   }
   depends_on = [ aws_vpc.main ]
@@ -108,11 +108,11 @@ resource "aws_security_group" "main-sg" {
 
 resource "aws_instance" "main-instance-1" {
   ami           = data.aws_ami.ubuntu.id
-  instance_type = "t2.micro"
+  instance_type = var.default_instance_type
   subnet_id     = aws_subnet.main-subnet.id
   associate_public_ip_address = "true"
   vpc_security_group_ids = ["${aws_security_group.main-sg.id}"]
-  key_name = "tf-key"
+  key_name = var.key_name
   tags = {
     Name = "instance-main"
   }
