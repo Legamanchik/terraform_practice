@@ -12,7 +12,8 @@ variable "cidr_blocks" {
 
 variable "cidr_block_vpc" {
   description = "cidr_block for vpc"
-  default = ["10.0.0.0/16"]
+  default = "10.0.0.0/16"
+
 }
 variable "key_name" {
     description = "Key pair name variable"
